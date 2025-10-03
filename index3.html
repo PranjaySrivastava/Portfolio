@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AquaCalc Pro - Rooftop Rainwater Harvesting Assessment Tool</title>
+
+<!-- Chart.js & jsPDF -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  :root {
+    --primary: #0077cc;
+    --secondary: #009944;
+    --bg-light: rgba(255,255,255,0.95);
+    --bg-dark: rgba(30,30,30,0.95);
+    --text-light: #fff;
+    --text-dark: #222;
+  }
+  body, html {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column;
+    background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80')
+                no-repeat center center fixed;
+    background-size: cover;
+  }
+  body.overlay::before {
+    content: "";
+    position: fixed; top:0;left:0;right:0;bottom:0;
+    background: linear-gradient(rgba(0,150,200,0.6), rgba(0,150,200,0.7));
+    z-index: -1;
+  }
+  .container {
+    max-width: 960px; margin: 2rem auto;
+    background: var(--bg-light); color: var(--text-dark);
+    border-radius: 10px; padding: 2rem 3rem;
+    box-shadow: 0 0 25px rgba(0,0,0,0.3);
+    transition: background 0.3s, color 0.3s;
+  }
+  h1,h2 { text-align: center; font-weight: 900; margin: 0.5rem 0; }
+  h2 { color: var(--primary); }
+  .subtitle { text-align: center; color: #444; margin-bottom: 2rem; }
+  button.primary, button#calculate, button#nextBtn, button#prevBtn, button#downloadPdf, button#downloadCsv {
+    background-color: var(--primary); color: white; border: none;
+    padding: 0.6rem 1.4rem; font-weight: 700; font-size: 1rem;
+    border-radius: 6px; cursor: pointer; margin: 1rem auto;
+    display: block; transition: 0.3s;
+  }
+  button:hover { background-color: #005fa3; }
+  button#calculate { background-color: var(--secondary); }
+  button#calculate:hover { background-color: #007a32; }
+  form { max-width: 800px; margin: 0 auto; }
+  form section { display: none; }
+  form section.active { display: block; }
+  label { display: block; margin-bottom: 0.3rem; font-weight: 600; }
+  input, select {
+    width: 100%; padding: 0.5rem; margin-bottom: 1rem;
+    border-radius: 5px; border: 1.5px solid #bbb;
+  }
+  input[readonly] { background: #eee; }
+  .gps-row { display: flex; gap: 1rem; }
+  .gps-row input { flex: 1; }
+  .gps-row button { flex-shrink: 0; }
+  #progressBar {
+    display: flex; margin: 1rem 0; justify-content: space-between;
+  }
+  .step {
+    width: 20%; text-align: center; font-size: 0.9rem; position: relative;
+  }
+  .step::before {
+    content: attr(data-step);
+    display: block; margin: 0 auto 0.5rem auto;
+    width: 30px; height: 30px; background: #bbb; border-radius: 50%;
+    line-height: 30px; color: #fff;
+  }
+  .step.active::before, .step.completed::before { background: var(--primary); }
+  #result {
+    max-width: 800px; margin: 2rem auto;
+    background: #e6f4ea; border: 2px solid var(--secondary);
+    padding: 1rem 2rem; border-radius: 10px;
+    display: none;
+  }
+  #chartContainer { width: 100%; max-width: 500px; margin: 2rem auto; }
+  #loading { text-align: center; display: none; }
+  #themeToggle { position: fixed; top: 1rem; right: 1rem; cursor: pointer; }
+  body.dark .container { background: var(--bg-dark); color: var(--text-light); }
+  body.dark input, body.dark select { background: #444; color: #fff; border: 1px solid #666; }
+</style>
+</head>
+<body class="overlay">
+
+<button id="themeToggle">🌙</button>
+
+<div class="container" id="landing">
+  <h1><span style="color:#0077cc;">💧</span> AquaCalc Pro</h1>
+  <h2>Rooftop Rainwater Harvesting Assessment Tool</h2>
+  <p class="subtitle">Calculate, design, and optimize your water conservation solutions.</p>
+  <button class="primary" id="startAssessmentBtn">Start Assessment</button>
+</div>
+
+<form id="assessmentForm" style="display:none;">
+  <div id="progressBar">
+    <div class="step active" data-step="1">Site Info</div>
+    <div class="step" data-step="2">Rooftop</div>
+    <div class="step" data-step="3">Rainfall</div>
+    <div class="step" data-step="4">Soil</div>
+    <div class="step" data-step="5">Household</div>
+  </div>
+
+  <!-- Sections -->
+  <section class="active">
+    <h3>📍 Site Information</h3>
+    <label for="location">Location *</label>
+    <input type="text" id="location" required />
+    <div class="gps-row">
+      <input type="text" id="latitude" placeholder="Latitude" />
+      <input type="text" id="longitude" placeholder="Longitude" />
+      <button type="button" id="getLocationBtn">Get Location</button>
+    </div>
+  </section>
+
+  <section>
+    <h3>🏠 Rooftop Details</h3>
+    <label>Area (m²) *</label>
+    <input type="number" id="rooftopArea" required />
+    <label>Material *</label>
+    <select id="rooftopMaterial" required>
+      <option disabled selected>Select</option>
+      <option value="concrete">Concrete</option>
+      <option value="metal">Metal</option>
+      <option value="tiles">Tiles</option>
+      <option value="asphalt">Asphalt</option>
+      <option value="others">Others</option>
+    </select>
+    <label>Drainage Coefficient</label>
+    <input type="number" id="drainageCoeff" min="0" max="1" step="0.01" />
+  </section>
+
+  <section>
+    <h3>🌧️ Rainfall Data</h3>
+    <label>Annual Rainfall (mm) *</label>
+    <input type="number" id="annualRainfall" required />
+    <button type="button" id="fetchRainfall">Fetch Rainfall (auto)</button>
+  </section>
+
+  <section>
+    <h3>🌍 Soil & Geology</h3>
+    <label>Soil Type *</label>
+    <select id="soilType" required>
+      <option disabled selected>Select</option>
+      <option>Sand</option><option>Clay</option><option>Loam</option>
+    </select>
+  </section>
+
+  <section>
+    <h3>🏡 Household</h3>
+    <label>Household Size *</label>
+    <input type="number" id="householdSize" required />
+    <label>Daily Water Demand (L)</label>
+    <input type="number" id="dailyWaterDemand" />
+  </section>
+
+  <div style="text-align:center;">
+    <button type="button" id="prevBtn">⬅ Prev</button>
+    <button type="button" id="nextBtn">Next ➡</button>
+    <button type="button" id="calculate" style="display:none;">Calculate</button>
+  </div>
+</form>
+
+<div id="loading">⏳ Calculating...</div>
+<div id="result"></div>
+<div id="chartContainer"><canvas id="resultChart"></canvas></div>
+<button id="downloadPdf" style="display:none;">Download Report</button>
+<button id="downloadCsv" style="display:none;">Download CSV</button>
+
+<script>
+  const steps = document.querySelectorAll(".step");
+  const sections = document.querySelectorAll("form section");
+  let currentStep = 0;
+  let chartInstance;
+
+  function showStep(n) {
+    sections.forEach((sec,i)=> sec.classList.toggle("active", i===n));
+    steps.forEach((s,i)=>{
+      s.classList.toggle("active", i===n);
+      s.classList.toggle("completed", i<n);
+    });
+    document.getElementById("prevBtn").style.display = n===0 ? "none" : "inline-block";
+    document.getElementById("nextBtn").style.display = n===sections.length-1 ? "none":"inline-block";
+    document.getElementById("calculate").style.display = n===sections.length-1 ? "inline-block":"none";
+  }
+
+  document.getElementById("startAssessmentBtn").onclick = ()=>{
+    document.getElementById("landing").style.display="none";
+    document.getElementById("assessmentForm").style.display="block";
+    showStep(0);
+  };
+  document.getElementById("nextBtn").onclick = ()=>{
+    if(sections[currentStep].querySelector("input,select").checkValidity()){
+      currentStep++; showStep(currentStep);
+    } else {
+      sections[currentStep].querySelector("input,select").reportValidity();
+    }
+  };
+  document.getElementById("prevBtn").onclick = ()=>{ if(currentStep>0){currentStep--; showStep(currentStep);} };
+
+  // Geolocation
+  document.getElementById("getLocationBtn").onclick = ()=>{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      document.getElementById("latitude").value=pos.coords.latitude.toFixed(6);
+      document.getElementById("longitude").value=pos.coords.longitude.toFixed(6);
+    },()=>alert("Location unavailable"));
+  };
+
+  // Auto drainage coeff
+  document.getElementById("rooftopMaterial").addEventListener("change", e=>{
+    const map={concrete:0.85, metal:0.9, tiles:0.75, asphalt:0.7, others:0.8};
+    document.getElementById("drainageCoeff").value=map[e.target.value]||0.8;
+  });
+
+  // Fetch Rainfall (Mock)
+  document.getElementById("fetchRainfall").onclick = ()=>{
+    alert("Rainfall data fetched from API (mock)");
+    document.getElementById("annualRainfall").value = 950; // demo value
+  };
+
+  // Calculate
+  document.getElementById("calculate").onclick = ()=>{
+    if(!document.getElementById("assessmentForm").reportValidity()) return;
+    document.getElementById("loading").style.display="block";
+    setTimeout(()=>{
+      document.getElementById("loading").style.display="none";
+
+      const area=+document.getElementById("rooftopArea").value;
+      const rain=+document.getElementById("annualRainfall").value;
+      let coeff=parseFloat(document.getElementById("drainageCoeff").value)||0.8;
+      const potential=area*rain*coeff; // liters/year approx
+      const runoff=area*rain; // gross runoff before coeff
+      const size=+document.getElementById("householdSize").value;
+      const daily=+document.getElementById("dailyWaterDemand").value||size*135;
+      const demand=daily*365;
+
+      // Feasibility score
+      let feasibility = potential/demand;
+      let feasibilityLabel = feasibility>=1?"High":(feasibility>=0.5?"Medium":"Low");
+
+      // Structure recommendation
+      let soil=document.getElementById("soilType").value;
+      let structure = "Recharge Pit";
+      if(soil==="Sand") structure="Recharge Shaft";
+      if(soil==="Clay") structure="Recharge Trench";
+
+      // Dimensions (simple estimation)
+      let pitVolume = potential*0.001; // convert to cubic meters approx
+      let pitDims = `Recommended pit: ${(pitVolume/1).toFixed(1)} m³ (e.g., 2m x 2m x ${(pitVolume/4).toFixed(1)}m)`;
+
+      // Cost estimation
+      let cost = pitVolume*2000; // ₹2000 per m³
+      let tankerCostSaved = (potential/1000)*100; // assume ₹100 per KL tanker
+      let benefitRatio = (tankerCostSaved/cost).toFixed(2);
+
+      document.getElementById("result").style.display="block";
+      document.getElementById("result").innerHTML=`
+        <h3>📊 Results</h3>
+        <strong>Potential:</strong> ${potential.toLocaleString()} L/year<br/>
+        <strong>Gross Runoff:</strong> ${runoff.toLocaleString()} L/year<br/>
+        <strong>Demand:</strong> ${demand.toLocaleString()} L/year<br/>
+        <b>Feasibility: ${feasibilityLabel}</b><br/>
+        <b>Suggested Structure:</b> ${structure}<br/>
+        <b>${pitDims}</b><br/>
+        <b>Cost Estimation:</b> ₹${cost.toLocaleString()} (approx)<br/>
+        <b>Benefit Ratio:</b> ${benefitRatio} (savings/cost)<br/>
+        <hr>
+        <i>Principal Aquifer: Alluvial Aquifer (mock)<br/>
+        Depth to Groundwater: 15–25 m (mock)</i>
+      `;
+
+      // Chart
+      if(chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(document.getElementById("resultChart"), {
+        type:'bar',
+        data:{
+          labels:["Potential","Demand"],
+          datasets:[{
+            label:"Liters/year",
+            data:[potential,demand],
+            backgroundColor:["#009944","#0077cc"],
+            borderColor:["#004d26","#003366"],
+            borderWidth:2
+          }]
+        },
+        options:{ responsive:true, plugins:{legend:{display:false}} }
+      });
+
+      document.getElementById("downloadPdf").style.display="block";
+      document.getElementById("downloadCsv").style.display="block";
+    },1000);
+  };
+
+  // PDF Download
+  document.getElementById("downloadPdf").onclick=()=>{
+    const { jsPDF } = window.jspdf;
+    const doc=new jsPDF();
+    doc.setFontSize(16);
+    doc.text("AquaCalc Pro - Rainwater Harvesting Report",20,20);
+    doc.setFontSize(12);
+    doc.text("Generated on: "+new Date().toLocaleString(),20,30);
+    let y=45;
+    const details=[
+      "📍 Location: "+document.getElementById("location").value,
+      "Lat: "+document.getElementById("latitude").value+"  Lon: "+document.getElementById("longitude").value,
+      "🏠 Rooftop Area: "+document.getElementById("rooftopArea").value+" m²",
+      "Material: "+document.getElementById("rooftopMaterial").value,
+      "Drainage Coeff: "+document.getElementById("drainageCoeff").value,
+      "🌧 Rainfall: "+document.getElementById("annualRainfall").value+" mm/year",
+      "🌍 Soil Type: "+document.getElementById("soilType").value,
+      "🏡 Household Size: "+document.getElementById("householdSize").value,
+      "Daily Demand: "+(document.getElementById("dailyWaterDemand").value||"auto")+" L"
+    ];
+    details.forEach(d=>{doc.text(d,20,y); y+=8;});
+    y+=10; doc.text("Results:",20,y);
+    y+=10; doc.text(document.getElementById("result").innerText,20,y);
+    const chartCanvas=document.getElementById("resultChart");
+    const chartImg=chartCanvas.toDataURL("image/png",1.0);
+    doc.addImage(chartImg,"PNG",20, y+20, 160,90);
+    doc.save("AquaCalc_Report.pdf");
+  };
+
+  // CSV Download
+  document.getElementById("downloadCsv").onclick=()=>{
+    let csv="Field,Value\n";
+    csv+="Location,"+document.getElementById("location").value+"\n";
+    csv+="Latitude,"+document.getElementById("latitude").value+"\n";
+    csv+="Longitude,"+document.getElementById("longitude").value+"\n";
+    csv+="Rooftop Area,"+document.getElementById("rooftopArea").value+"\n";
+    csv+="Material,"+document.getElementById("rooftopMaterial").value+"\n";
+    csv+="Drainage Coeff,"+document.getElementById("drainageCoeff").value+"\n";
+    csv+="Rainfall,"+document.getElementById("annualRainfall").value+"\n";
+    csv+="Soil Type,"+document.getElementById("soilType").value+"\n";
+    csv+="Household Size,"+document.getElementById("householdSize").value+"\n";
+    csv+="Daily Demand,"+document.getElementById("dailyWaterDemand").value+"\n";
+    csv+="Results,"+document.getElementById("result").innerText.replace(/\n/g," | ")+"\n";
+    const blob=new Blob([csv],{type:"text/csv"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="AquaCalc_Report.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Theme toggle
+  document.getElementById("themeToggle").onclick=()=>{
+    document.body.classList.toggle("dark");
+    document.getElementById("themeToggle").textContent = 
+      document.body.classList.contains("dark")?"☀️":"🌙";
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎮 Crypto Arcade Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Press Start 2P', cursive, Arial, sans-serif;
+      background: radial-gradient(circle at top, rgb(13, 13, 13), rgb(0, 0, 0));
+      color: rgb(0, 255, 234);
+      text-align: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      color: rgb(255, 204, 0);
+      text-shadow: 0 0 10px rgb(255, 204, 0), 0 0 20px rgb(255, 102, 0);
+      font-size: 22px;
+      margin-bottom: 15px;
+    }
+
+    /* Leaderboard Table */
+    table {
+      width: 95%;
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: rgba(20, 20, 40, 0.95);
+      border: 2px solid rgb(0, 255, 234);
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgb(0, 255, 234);
+      overflow: hidden;
+    }
+    th, td {
+      padding: 15px;
+      border-bottom: 1px solid rgb(51, 51, 51);
+    }
+    th {
+      background: rgb(17, 17, 17);
+      color: rgb(255, 204, 0);
+      text-shadow: 0 0 5px rgb(255, 102, 0);
+    }
+    tr {
+      transition: transform 0.2s, background 0.2s;
+    }
+    tr:hover {
+      background: rgba(0, 255, 255, 0.2);
+      transform: scale(1.02);
+    }
+
+    /* Trophy icons */
+    .rank-1::before { content: ""; }
+    .rank-2::before { content: ""; }
+    .rank-3::before { content: ""; }
+
+    /* XP Progress Bar */
+    .progress {
+      background: rgb(51, 51, 51);
+      border-radius: 10px;
+      overflow: hidden;
+      height: 12px;
+      width: 100px;
+      margin: auto;
+    }
+    .progress-bar {
+      height: 100%;
+      transition: width 0.5s ease-in-out;
+    }
+    .green { background: rgb(0, 255, 0); }
+    .red { background: rgb(255, 0, 51); }
+
+    /* Buttons Arcade Style */
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 2px solid rgb(0, 255, 234);
+      background: black;
+      color: rgb(0, 255, 234);
+      font-weight: bold;
+      text-shadow: 0 0 5px rgb(0, 255, 234);
+      cursor: pointer;
+    }
+    button:hover {
+      background: rgb(0, 255, 234);
+      color: black;
+      box-shadow: 0 0 10px rgb(0, 255, 234);
+    }
+
+    /* Modal with Neon Glow */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: rgb(17, 17, 17);
+      padding: 20px;
+      border: 2px solid rgb(255, 204, 0);
+      border-radius: 10px;
+      width: 90%;
+      max-width: 700px;
+      color: white;
+      box-shadow: 0 0 20px rgb(255, 204, 0);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .close { cursor: pointer; font-size: 20px; font-weight: bold; color: rgb(255, 102, 0); }
+    canvas { margin-top: 20px; background: white; border-radius: 8px; }
+
+    /* Price flash */
+    .flash-green { animation: flashGreen 0.5s; }
+    .flash-red { animation: flashRed 0.5s; }
+    @keyframes flashGreen { from { background: rgba(0,255,0,0.4);} to { background: transparent;} }
+    @keyframes flashRed { from { background: rgba(255,0,0,0.4);} to { background: transparent;} }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <h1>🎮 Crypto Arcade Leaderboard</h1>
+  <div>
+    <input type="text" id="search" placeholder="Search coin">
+    <button onclick="loadCoins()">🔍 Search</button>
+    <button onclick="refreshData()">🔄 Refresh</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Coin</th>
+        <th>Price</th>
+        <th>24h Change</th>
+        <th>XP Bar</th>
+      </tr>
+    </thead>
+    <tbody id="cryptoTable"></tbody>
+  </table>
+  <!-- Modal -->
+  <div class="modal" id="chartModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="chartTitle">Coin Price Chart</h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <canvas id="priceChart" height="250"></canvas>
+    </div>
+  </div>
+  <!--allcoin store crypto data and chart store chart.js graph-->
+  <script>
+    let allCoins = [];
+    let chart;
+    const coinNames = {
+      "BTCUSDT": "Bitcoin",
+      "ETHUSDT": "Ethereum",
+      "BNBUSDT": "Binance Coin",
+      "XRPUSDT": "Ripple",
+      "ADAUSDT": "Cardano",
+      "DOGEUSDT": "Dogecoin",
+      "SOLUSDT": "Solana",
+      "DOTUSDT": "Polkadot",
+      "MATICUSDT": "Polygon",
+      "LTCUSDT": "Litecoin"
+    };
+    /* fetch live crypto price and convert to JSON */
+    async function loadCoins() {
+      try {
+        const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+        const data = await res.json();
+        /* select top 10 from complete data */
+        allCoins = data
+          .filter(c => c.symbol.endsWith("USDT") && coinNames[c.symbol])
+          .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+          .slice(0, 10);
+        displayCoins(allCoins);
+        /* for showing error message if any error is found */
+      } catch {
+        document.getElementById("cryptoTable").innerHTML =
+          '<tr><td colspan="5">⚠️ Error loading data</td></tr>';
+      }
+    }
+    /* filter coins that match search bar bar text */
+    function displayCoins(coins) {
+      const query = document.getElementById("search").value.toLowerCase();
+      const filtered = coins.filter(c =>
+        coinNames[c.symbol].toLowerCase().includes(query) ||
+        c.symbol.toLowerCase().includes(query)
+      );
+        /* empty table create new row from tr open chart on one click */
+      const table = document.getElementById("cryptoTable");
+      table.innerHTML = "";
+      filtered.forEach((coin, i) => {
+        const change = parseFloat(coin.priceChangePercent);
+        const row = document.createElement("tr");
+        row.onclick = () => openChart(coin.symbol);
+        /* fill row with data */
+        row.innerHTML = `
+          <td class="rank-${i+1}">${i+1}</td>
+          <td>${coinNames[coin.symbol]} (${coin.symbol})</td>
+          <td>$${parseFloat(coin.lastPrice).toLocaleString()}</td>
+          <td style="color:${change >= 0 ? 'lime' : 'red'}">${change.toFixed(2)}%</td>
+          <td>
+            <div class="progress">
+              <div class="progress-bar ${change>=0?'green':'red'}" style="width:${Math.min(Math.abs(change)*3,100)}%"></div>
+            </div>
+          </td>`;
+          /* make row flash for 0.6 sec */
+        if (change >= 0) row.classList.add("flash-green");
+        else row.classList.add("flash-red");
+        setTimeout(() => row.classList.remove("flash-green", "flash-red"), 600);
+        table.appendChild(row);
+      });
+    }
+    /* show popup update title */
+    async function openChart(symbol) {
+      document.getElementById("chartTitle").textContent = coinNames[symbol] + " (" + symbol + ")";
+      document.getElementById("chartModal").style.display = "flex";
+      const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=24`);
+      const data = await res.json();
+        /* to give timestamp to chart */
+      const prices = data.map(p => ({
+        time: new Date(p[0]).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}),
+        value: parseFloat(p[4])
+      }));
+      /* it ask permission to draw chart and shows price at that hour */
+      const ctx = document.getElementById("priceChart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: prices.map(p => p.time),
+          datasets: [{
+            label: coinNames[symbol] + " Price (USDT)",
+            data: prices.map(p => p.value),
+            borderColor: "#ffcc00",
+            backgroundColor: "rgba(255,204,0,0.2)",
+            fill: true,
+            tension: 0.2
+          }]
+        }, /*line helps in creating yellow line chart */
+        options: {
+          responsive: true,
+          scales: {
+            x: { ticks: { color: "#fff" } },
+            y: { ticks: { color: "#fff" } }
+          },
+          plugins: { legend: { labels: { color: "#fff" } } }
+        }
+      });
+    }
+    /* close popup and reload data */
+    function closeModal() { document.getElementById("chartModal").style.display = "none"; }
+    function refreshData() { loadCoins(); }
+    /* auto update data after 30 sec */
+    setInterval(loadCoins, 30000);
+    loadCoins();
+  </script>
+</body>
+</html>
