@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pranjay Srivastava Portfolio</title>
+    <style>
+        :root {
+            --bg: white;
+            --text: black;
+            --primary: rgb(17, 228, 225);
+            --accent: rgb(255, 0, 166);
+            --font-main: 'Inter', sans-serif;
+            --card-bg: white;
+            --footer-bg: black;
+            --footer-text: white;
+        }
+
+        /* Dark mode toggle */
+        #dark-toggle:checked~.site {
+            --bg: black;
+            --text: whitesmoke;
+            --primary: red;
+            --accent: blue;
+            --card-bg: rgb(20, 20, 20);
+            --footer-bg: black;
+            --footer-text: lightgray;
+        }
+
+        /* Global body */
+        body {
+            margin: 0;
+            font-family: var(--font-main);
+            background: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .site {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ===== Header ===== */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 16px 24px;
+            background-color: var(--bg);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo img {
+            height: 100px;
+            width: 200px;
+            display: inline-block;
+            margin: 0 auto;
+            vertical-align: middle;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 100px;
+        }
+
+        nav a {
+            margin-left: 20px;
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 500;
+            font-size: x-large;
+            transition: color 250ms ease-in-out;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        /* Toggle switch */
+        .theme-toggle {
+            position: relative;
+            display: inline-block;
+            width: 45px;
+            height: 24px;
+            margin-left: 40px;
+            vertical-align: middle;
+        }
+
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: grey;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .slider::before {
+            /* content:""==create an empty pseudo-element to style */
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: background-color 0.3s ease;
+        }
+
+        input:checked+.slider {
+            background: var(--primary);
+        }
+
+        input:checked+.slider::before {
+            transform: translateX(20px);
+        }
+
+        /* ===== Animations ===== */
+        /*Makes an element appear while sliding up*/
+        @keyframes fadeInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /*  Makes an element grow slightly and shrink back */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes float {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* ===== Hero Section ===== */
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 24px;
+            align-items: center;
+            padding: 100px 24px 40px 24px;
+        }
+
+        .avatar img {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 100px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .hero h1 {
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            animation-delay: 0.2s;
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+
+        .hero p {
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            animation-delay: 0.4s;
+            margin-bottom: 12px;
+        }
+
+        .hero .btn {
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            animation-delay: 0.6s;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 16px 10px 16px;
+            margin-right: 12px;
+            border-radius: 6px;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn.outline {
+            background: transparent;
+            border: 2px solid ;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn:hover {
+            background: var(--accent);
+        }
+
+        /* ===== Projects Section ===== */
+        .projects {
+            padding: 40px 24px 40px 24px;
+        }
+
+        .projects h2 {
+            font-size: 2rem;
+            margin-bottom: 24px;
+        }
+
+        .project-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .project-card {
+            background-color: var(--card-bg);
+            border: 1px solid white;
+            border-radius: 10px;
+            padding: 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 10px 20px gray;
+            background-color: var(--accent);
+        }
+
+        .project-card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .project-card a {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* ===== About Section ===== */
+        .about {
+            padding: 40px 24px 40px 24px;
+            background-color: var(--bg);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .about h2 {
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            text-align: center;
+            color: var(--text);
+        }
+
+        .about-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            max-width: 800px;
+            font-size: 20px;
+            margin: 0px auto 0px auto;
+            color: var(--text);
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+            animation-delay: 0.5s;
+        }
+
+        .profile-pic {
+            border-radius: 50%;
+            width: 180px;
+            height: 180px;
+            object-fit: fill;
+            border: 3px solid var(--primary);
+        }
+
+        /* ===== Contact Section ===== */
+        .contact {
+            padding: 40px 24px 40px 24px;
+            text-align: center;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .contact h2 {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .contact p {
+            margin-bottom: 24px;
+            color: var(--text);
+        }
+
+        .contact-form {
+            max-width: 500px;
+            margin: 0 auto 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .contact-form input,
+        .contact-form textarea {
+            padding: 12px;
+            border: 1px solid rgb(170, 170, 170);
+            border-radius: 6px;
+            font-size: 1rem;
+            background: var(--card-bg);
+            color: var(--text);
+        }
+
+        .contact-form input::placeholder,
+        .contact-form textarea::placeholder {
+            color: lightgray;
+        }
+
+        .contact-form button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .contact-form button:hover {
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--primary), 0 0 24px var(--accent);
+            text-shadow: 0 0 8px var(--accent);
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            background-color: var(--footer-bg);
+            color: var(--footer-text);
+            text-align: center;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .social-links a {
+            margin: 0 8px;
+            color: var(--footer-text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: var(--accent);
+            text-shadow: 0 0 8px var(--accent), 0 0 16px var(--primary);
+        }
+
+        /* ===== Responsive ===== */
+        /*for tablet*/
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            nav {
+                margin-top: 10px;
+            }
+
+            .hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .avatar {
+                order: -1;
+                max-width: 200px;
+                margin: 0 auto 20px;
+            }
+
+            .about-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+        /*for mobile*/
+        @media (max-width: 480px) {
+            body {
+                font-size: 0.95rem;
+            }
+
+            .hero h1 {
+                font-size: 1.5rem;
+            }
+
+            .btn {
+                display: block;
+                margin: 10px auto;
+                width: 100%;
+                text-align: center;
+            }
+
+            .project-list {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-form {
+                width: 100%;
+                padding: 0 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Dark Mode Toggle -->
+    <input type="checkbox" id="dark-toggle" hidden>
+    <div class="site">
+        <header>
+            <div class="logo">
+                <img src="pranjay's logo.png" alt="Pranjay Srivastava Logo">
+            </div>
+            <nav>
+                <a href="#projects">Projects</a>
+                <a href="#about-me">About</a>
+                <a href="#contact">Contact</a>
+                <label class="theme-toggle">
+                    <input type="checkbox" onclick="document.getElementById('dark-toggle').click();">
+                    <span class="slider"></span>
+                </label>
+            </nav>
+        </header>
+
+        <section class="hero" id="hero">
+            <div class="intro">
+                <h1>Hi, I'm PRANJAY SRIVASTAVA</h1>
+                <p>I build clean, accessible, and fast websites using only HTML & CSS (no JavaScript needed).</p>
+                <a href="#projects" class="btn">See My Work</a>
+                <a href="#contact" class="btn outline">Contact Me</a>
+            </div>
+            <div class="avatar">
+                <img src="pranjay's pic.jpg" alt="Your photo">
+            </div>
+        </section>
+
+        <section class="projects" id="projects">
+            <h2>Projects</h2>
+            <div class="project-list">
+                <article class="project-card">
+                    <img src="crypto price tracker.png" alt="Project screenshot">
+                    <h3>Cryto Price Tracker</h3>
+                    <p>This is a cryptocurrency price tracker that helps you monitor the real-time rise and fall of various cryptocurrencies.</p>
+                    <a href="#" target="_blank">View Project</a>
+                </article>
+                <article class="project-card">
+                    <img src="Aquacalc.png" alt="Project screenshot">
+                    <h3>Rain Water Harvesting and Artificial Recharge</h3>
+                    <p>A system designed to collect, store, and recharge rainwater efficiently, promoting sustainable water management and conservation.</p>
+                    <a href="#" target="_blank">View Project</a>
+                </article>
+                <article class="project-card">
+                    <img src="netflix clone.png" alt="Project screenshot">
+                    <h3>Netflix clone</h3>
+                    <p>A fully responsive Netflix clone built entirely with HTML and CSS, replicating the layout and design of the streaming platform.</p>
+                    <a href="#" target="_blank">View Project</a>
+                </article>
+            </div>
+        </section>
+
+        <section class="about" id="about-me">
+            <h2>About Me</h2>
+            <div class="about-content">
+                <img src="pranjay's pic.jpg" alt="Your photo" class="profile-pic">
+                <div>
+                    <p>Hi, I'm Pranjay Srivastava, a Computer Science student currently studying at <a href="https://www.scaler.com/school-of-technology/" target="_blank">Scaler School of Technology. </a>I am passionate about building clean, efficient, and accessible web applications using HTML and CSS, and I enjoy exploring innovative solutions in web development.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="contact" id="contact">
+            <h2>Contact</h2>
+            <p>If you'd like to collaborate or just say hi, feel free to drop me a message.</p>
+            <form class="contact-form">
+                <input type="text" name="name" placeholder="Your Name" required>
+                <input type="email" name="email" placeholder="Your Email" required>
+                <textarea name="message" rows="5" placeholder="Your Message" required></textarea>
+                <button type="submit">Send Message</button>
+            </form>
+        </section>
+
+        <footer>
+            <p>© 2025 Pranjay Srivastava. All Rights Reserved.</p>
+            <div class="social-links">
+                <a href="https://www.linkedin.com/in/pranjay-srivastava-745575378" target="_blank">LinkedIn</a>
+                <a href="https://github.com/PranjaySrivastava" target="_blank">GitHub</a>
+                <a href="#">Twitter</a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
